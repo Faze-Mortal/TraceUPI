@@ -1,7 +1,9 @@
+
 """HTTP-layer validators that must emit Contract v1.2 string `detail` values."""
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import re
 
 from backend.constants import (
@@ -24,15 +26,30 @@ class ContractValidationError(ValueError):
 
 
 def validate_as_of(as_of: str | None) -> str | None:
-    """None means T_as_of = +inf. Non-null values must be ISO 8601 UTC `...Z`."""
+    """Validate a real ISO 8601 UTC timestamp ending in Z.
+
+    None means T_as_of = +infinity.
+    """
     if as_of is None:
         return None
+
     if not isinstance(as_of, str) or not _ISO8601_UTC_RE.fullmatch(as_of):
         raise ContractValidationError(DETAIL_INVALID_AS_OF)
+
+    try:
+        parsed = datetime.strptime(as_of, "%Y-%m-%dT%H:%M:%SZ")
+        parsed.replace(tzinfo=timezone.utc)
+    except ValueError as exc:
+        raise ContractValidationError(DETAIL_INVALID_AS_OF) from exc
+
     return as_of
 
 
-def validate_budget_k(budget_k: int | None, *, default: int | None = None) -> int | None:
+def validate_budget_k(
+    budget_k: int | None,
+    *,
+    default: int | None = None,
+) -> int | None:
     if budget_k is None:
         return default
     if budget_k not in ALLOWED_BUDGET_K:
@@ -41,7 +58,12 @@ def validate_budget_k(budget_k: int | None, *, default: int | None = None) -> in
 
 
 def validate_alert_status_filter(status: str | None) -> str | None:
-    allowed = {"OPEN", "INVESTIGATING", "CONFIRMED_FRAUD", "DISMISSED_BENIGN"}
+    allowed = {
+        "OPEN",
+        "INVESTIGATING",
+        "CONFIRMED_FRAUD",
+        "DISMISSED_BENIGN",
+    }
     if status is None:
         return None
     if status not in allowed:
@@ -54,5 +76,9 @@ def validate_counterfactual_interventions(
     suppress_device_sharing: bool,
     suppress_complaints: bool,
 ) -> None:
-    if not remove_edge_ids and not suppress_device_sharing and not suppress_complaints:
+    if (
+        not remove_edge_ids
+        and not suppress_device_sharing
+        and not suppress_complaints
+    ):
         raise ContractValidationError(DETAIL_EMPTY_COUNTERFACTUAL)
