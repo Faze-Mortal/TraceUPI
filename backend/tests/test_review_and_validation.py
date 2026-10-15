@@ -64,11 +64,16 @@ class TestHttpValidation(unittest.TestCase):
 
     def test_budget_k(self) -> None:
         self.assertEqual(validate_budget_k(10), 10)
+        self.assertEqual(validate_budget_k(20), 20)
+        self.assertEqual(validate_budget_k(50), 50)
+        self.assertEqual(validate_budget_k("10"), 10)
         self.assertEqual(validate_budget_k(None, default=20), 20)
+        self.assertEqual(validate_budget_k("", default=20), 20)
 
-        with self.assertRaises(ContractValidationError) as ctx:
-            validate_budget_k(15)
-        self.assertEqual(ctx.exception.detail, "invalid_budget_k")
+        for invalid in (0, -1, -20, 15, 100, "abc", "0", "-5", "10.5", 10.5, True, False):
+            with self.assertRaises(ContractValidationError, msg=f"Failed for {invalid}") as ctx:
+                validate_budget_k(invalid)
+            self.assertEqual(ctx.exception.detail, "invalid_budget_k")
 
     def test_status_filter(self) -> None:
         self.assertEqual(validate_alert_status_filter("OPEN"), "OPEN")

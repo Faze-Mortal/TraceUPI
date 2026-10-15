@@ -1,4 +1,6 @@
-﻿
+
+from typing import Any
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -84,6 +86,18 @@ async def pipeline_unavailable_handler(request, exc: PipelineUnavailableError):
     return JSONResponse(status_code=500, content={"detail": DETAIL_MODEL_UNAVAILABLE})
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc: RequestValidationError):
+    for err in exc.errors():
+        loc = err.get("loc", ())
+        if "budget_k" in loc:
+            return JSONResponse(
+                status_code=422,
+                content={"detail": DETAIL_INVALID_BUDGET_K},
+            )
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
+
 @app.get("/health", response_model=HealthResponse)
 def health_check() -> HealthResponse:
     return HealthResponse(status="ok", service="TraceUPI API")
@@ -118,7 +132,7 @@ def run_pipeline(
 @app.get("/api/alerts", response_model=AlertsResponse)
 def list_alerts(
     status: str | None = Query(default=None),
-    budget_k: int | None = Query(default=None),
+    budget_k: Any = Query(default=None),
 ) -> AlertsResponse:
     status = validate_alert_status_filter(status)
     budget = validate_budget_k(budget_k)
@@ -187,7 +201,7 @@ def run_counterfactual(
 
 @app.get("/api/metrics", response_model=MetricsResponse)
 def get_metrics(
-    budget_k: int = Query(default=DEFAULT_BUDGET_K),
+    budget_k: Any = Query(default=DEFAULT_BUDGET_K),
 ) -> MetricsResponse:
     budget = validate_budget_k(budget_k, default=DEFAULT_BUDGET_K)
     store = get_investigation_store()
@@ -198,18 +212,17 @@ def get_metrics(
             detail=DETAIL_ANALYSIS_NOT_RUN,
         )
 
-    metrics = store.get_metrics()
-    if not store.metrics_available() or metrics is None:
+    if not store.metrics_available():
         raise HTTPException(
             status_code=404,
             detail=DETAIL_METRICS_UNAVAILABLE,
         )
 
-    metrics["budget_k"] = budget
-    for section in ("ml", "baseline"):
-        if section in metrics and isinstance(metrics[section], dict):
-            budget_metrics = metrics[section].get("budget_metrics")
-            if isinstance(budget_metrics, dict):
-                budget_metrics["budget_k"] = budget
+    metrics = store.get_metrics(budget_k=budget)
+    if metrics is None:
+        raise HTTPException(
+            status_code=404,
+            detail=DETAIL_METRICS_UNAVAILABLE,
+        )
 
     return MetricsResponse.model_validate(metrics)

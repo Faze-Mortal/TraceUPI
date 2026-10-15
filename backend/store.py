@@ -185,11 +185,27 @@ class InvestigationStore:
         self._require_run()
         return self._metrics_available
 
-    def get_metrics(self) -> dict[str, Any] | None:
+    def get_metrics(self, budget_k: int = 20) -> dict[str, Any] | None:
         self._require_run()
         if self._metrics is None:
             return None
-        return copy.deepcopy(self._metrics)
+        res = copy.deepcopy(self._metrics)
+        budget_by_k = res.pop("_budget_metrics_by_k", None)
+        if budget_by_k and budget_k in budget_by_k:
+            res["budget_k"] = budget_k
+            if "ml" in res and isinstance(res["ml"], dict):
+                res["ml"]["budget_metrics"] = budget_by_k[budget_k]["ml"]
+            if "baseline" in res and isinstance(res["baseline"], dict):
+                res["baseline"]["budget_metrics"] = budget_by_k[budget_k]["baseline"]
+        else:
+            res["budget_k"] = budget_k
+            for section in ("ml", "baseline"):
+                if section in res and isinstance(res[section], dict):
+                    budget_metrics = res[section].get("budget_metrics")
+                    if isinstance(budget_metrics, dict):
+                        budget_metrics["budget_k"] = budget_k
+        return res
+
 
     def replace_analysis(self, snapshot: AnalysisSnapshot) -> None:
         """Atomically replace the active snapshot. Does not fabricate scores."""

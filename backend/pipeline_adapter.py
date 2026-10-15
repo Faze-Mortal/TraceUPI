@@ -1,4 +1,4 @@
-﻿"""Adapter between the ML pipeline and the backend investigation store."""
+"""Adapter between the ML pipeline and the backend investigation store."""
 
 from __future__ import annotations
 
@@ -148,12 +148,13 @@ def build_analysis_snapshot(
             )
         )
 
-    # The current ML pipeline does not return contract-complete metrics.
-    # Never mark metrics available just because labels exist.
+    metrics = result.get("metrics")
+    metrics_available = bool(result.get("metrics_available") and metrics is not None)
+
     return AnalysisSnapshot(
         n_transactions=int(result["n_transactions"]),
         as_of=result.get("as_of"),
         alerts=tuple(incoming_alerts),
-        metrics=None,
-        metrics_available=False,
+        metrics=metrics,
+        metrics_available=metrics_available,
     )

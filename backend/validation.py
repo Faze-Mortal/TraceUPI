@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import re
+from typing import Any
 
 from backend.constants import (
     ALLOWED_BUDGET_K,
@@ -46,15 +47,26 @@ def validate_as_of(as_of: str | None) -> str | None:
 
 
 def validate_budget_k(
-    budget_k: int | None,
+    budget_k: Any = None,
     *,
     default: int | None = None,
 ) -> int | None:
-    if budget_k is None:
+    if budget_k is None or budget_k == "":
         return default
-    if budget_k not in ALLOWED_BUDGET_K:
+    if isinstance(budget_k, bool):
         raise ContractValidationError(DETAIL_INVALID_BUDGET_K)
-    return budget_k
+    try:
+        val = int(budget_k)
+        if isinstance(budget_k, float) and budget_k != val:
+            raise ContractValidationError(DETAIL_INVALID_BUDGET_K)
+        if isinstance(budget_k, str) and str(val) != budget_k.strip():
+            raise ContractValidationError(DETAIL_INVALID_BUDGET_K)
+    except (ValueError, TypeError) as exc:
+        raise ContractValidationError(DETAIL_INVALID_BUDGET_K) from exc
+
+    if val not in ALLOWED_BUDGET_K:
+        raise ContractValidationError(DETAIL_INVALID_BUDGET_K)
+    return val
 
 
 def validate_alert_status_filter(status: str | None) -> str | None:

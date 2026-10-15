@@ -570,11 +570,24 @@ def run_analysis(
         }
         alert_summaries.append(alert_summary)
 
+    metrics = None
+    if metrics_available:
+        from ml.evaluate import compute_contract_v12_metrics
+        metrics = compute_contract_v12_metrics(
+            transactions=all_raw_transactions or transactions,
+            scores=scores,
+            features_by_account=features_by_account,
+            decision_threshold=threshold,
+            budget_k=20,
+            timestamp=created_at,
+        )
+
     return {
         "n_transactions": len(snapshot_txns),
         "n_alerts": len(alerts),
         "as_of": as_of,
-        "metrics_available": metrics_available,
+        "metrics_available": metrics_available and (metrics is not None),
+        "metrics": metrics,
         "alerts": alerts,
         "alert_summaries": alert_summaries,
         "graph": graph,
