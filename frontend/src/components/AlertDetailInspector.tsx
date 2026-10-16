@@ -65,7 +65,7 @@ export const AlertDetailInspector: React.FC<AlertDetailInspectorProps> = ({
             width="32"
             height="32"
             fill="none"
-            stroke="#EF4444"
+            stroke="var(--color-high-risk, #C65B4A)"
             strokeWidth="2"
             aria-hidden="true"
           >
@@ -94,7 +94,7 @@ export const AlertDetailInspector: React.FC<AlertDetailInspectorProps> = ({
             width="40"
             height="40"
             fill="none"
-            stroke="#4B5563"
+            stroke="var(--color-text-muted, #7B7F76)"
             strokeWidth="1.5"
             aria-hidden="true"
           >
@@ -352,10 +352,10 @@ export const AlertDetailInspector: React.FC<AlertDetailInspectorProps> = ({
 
             <div className="fingerprint-full-row" style={{ marginTop: '0.5rem', wordBreak: 'break-all', fontSize: '0.75rem' }}>
               <span className="text-dim">Full SHA-256 Alert Fingerprint:</span>
-              <div className="fp-full-text" style={{ color: '#93C5FD' }}>{alert.alert_fingerprint}</div>
+              <div className="fp-full-text font-mono" style={{ color: 'var(--color-text-primary, #EAE7DF)' }}>{alert.alert_fingerprint}</div>
             </div>
 
-            <div className="raw-fields-grid" style={{ marginTop: '0.5rem', padding: '0.5rem', background: '#0A0F1D', borderRadius: '4px', fontSize: '0.75rem' }}>
+            <div className="raw-fields-grid font-mono" style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'var(--app-bg, #121411)', border: '1px solid var(--border-subtle, #2C3028)', borderRadius: '4px', fontSize: '0.75rem' }}>
               <div><strong>ml.score:</strong> {alert.ml.score}</div>
               <div><strong>ml.threshold:</strong> {alert.ml.threshold}</div>
               <div><strong>ml.flagged:</strong> {String(alert.ml.flagged)}</div>

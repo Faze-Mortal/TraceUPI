@@ -92,7 +92,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenDashboard }) => 
         <div className="cards-grid-3">
           <article className="card">
             <div className="card-icon-wrapper" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#F59E0B" strokeWidth="2">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--color-warning, #D4A15A)" strokeWidth="2">
                 <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
                 <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
               </svg>
@@ -107,7 +107,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenDashboard }) => 
 
           <article className="card">
             <div className="card-icon-wrapper" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#EF4444" strokeWidth="2">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--color-high-risk, #C65B4A)" strokeWidth="2">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
@@ -122,7 +122,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenDashboard }) => 
 
           <article className="card">
             <div className="card-icon-wrapper" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#8B5CF6" strokeWidth="2">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--brand-terracotta, #A56F58)" strokeWidth="2">
                 <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
                 <line x1="12" y1="18" x2="12.01" y2="18" strokeWidth="3" />
               </svg>

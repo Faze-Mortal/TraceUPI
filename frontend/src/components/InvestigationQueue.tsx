@@ -92,7 +92,7 @@ export const InvestigationQueue: React.FC<InvestigationQueueProps> = ({
               width="18"
               height="18"
               fill="none"
-              stroke="#F59E0B"
+              stroke="var(--brand-terracotta, #A56F58)"
               strokeWidth="2"
               aria-hidden="true"
             >
@@ -200,7 +200,7 @@ export const InvestigationQueue: React.FC<InvestigationQueueProps> = ({
               width="36"
               height="36"
               fill="none"
-              stroke="#6B7280"
+              stroke="var(--color-text-muted, #7B7F76)"
               strokeWidth="1.5"
               aria-hidden="true"
             >

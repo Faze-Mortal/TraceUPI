@@ -50,7 +50,7 @@ export const DashboardPlaceholder: React.FC<DashboardPlaceholderProps> = ({ onBa
       <div className="console-container">
         <div className="milestone-notice-banner">
           <div className="notice-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F59E0B" strokeWidth="2">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--brand-terracotta, #A56F58)" strokeWidth="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
           </div>
@@ -69,7 +69,7 @@ export const DashboardPlaceholder: React.FC<DashboardPlaceholderProps> = ({ onBa
           <section className="workbench-column" aria-labelledby="col-queue-title">
             <div className="col-header">
               <h3 id="col-queue-title" className="col-title">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#F59E0B" strokeWidth="2" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--brand-terracotta, #A56F58)" strokeWidth="2" aria-hidden="true">
                   <line x1="8" y1="6" x2="21" y2="6" />
                   <line x1="8" y1="12" x2="21" y2="12" />
                   <line x1="8" y1="18" x2="21" y2="18" />
@@ -102,7 +102,7 @@ export const DashboardPlaceholder: React.FC<DashboardPlaceholderProps> = ({ onBa
           <section className="workbench-column" aria-labelledby="col-graph-title">
             <div className="col-header">
               <h3 id="col-graph-title" className="col-title">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#06B6D4" strokeWidth="2" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--brand-terracotta, #A56F58)" strokeWidth="2" aria-hidden="true">
                   <circle cx="18" cy="5" r="3" />
                   <circle cx="6" cy="12" r="3" />
                   <circle cx="18" cy="19" r="3" />
@@ -138,7 +138,7 @@ export const DashboardPlaceholder: React.FC<DashboardPlaceholderProps> = ({ onBa
           <section className="workbench-column" aria-labelledby="col-studio-title">
             <div className="col-header">
               <h3 id="col-studio-title" className="col-title">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#8B5CF6" strokeWidth="2" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--brand-terracotta, #A56F58)" strokeWidth="2" aria-hidden="true">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                   <polyline points="14 2 14 8 20 8" />
                   <line x1="16" y1="13" x2="8" y2="13" />

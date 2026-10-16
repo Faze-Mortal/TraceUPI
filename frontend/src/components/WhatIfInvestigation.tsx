@@ -107,7 +107,7 @@ export const WhatIfInvestigation: React.FC<WhatIfInvestigationProps> = ({ alert 
             width="20"
             height="20"
             fill="none"
-            stroke="#A78BFA"
+            stroke="var(--brand-terracotta, #A56F58)"
             strokeWidth="2"
             aria-hidden="true"
           >
@@ -287,7 +287,7 @@ export const WhatIfInvestigation: React.FC<WhatIfInvestigationProps> = ({ alert 
       {/* Error Banner */}
       {error && (
         <div className="what-if-error-banner" role="alert" data-testid="what-if-error-banner">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#EF4444" strokeWidth="2" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--color-high-risk, #C65B4A)" strokeWidth="2" aria-hidden="true">
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />

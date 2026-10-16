@@ -13,35 +13,66 @@ type SelectedElement =
   | { type: 'edge'; data: EvidenceEdge }
   | null
 
-function getNodeColor(type: NodeType): { fill: string; stroke: string; text: string } {
-  switch (type) {
-    case 'account':
-      return { fill: '#1F1A12', stroke: '#F59E0B', text: '#FBBF24' }
-    case 'device':
-      return { fill: '#1C152E', stroke: '#8B5CF6', text: '#A78BFA' }
-    case 'merchant':
-      return { fill: '#0C2028', stroke: '#06B6D4', text: '#22D3EE' }
-    case 'complaint':
-      return { fill: '#2A1215', stroke: '#EF4444', text: '#F87171' }
-    default:
-      return { fill: '#111827', stroke: '#6B7280', text: '#D1D5DB' }
+function getNodeColor(
+  type: NodeType,
+  score: number | null = null,
+  isTarget: boolean = false,
+  metadata?: Record<string, unknown>
+): { fill: string; stroke: string; text: string } {
+  if (isTarget) {
+    const isHigh = score !== null && score >= 0.8
+    return {
+      fill: isHigh ? '#35221F' : '#352B1E',
+      stroke: isHigh ? '#C65B4A' : '#D4A15A',
+      text: '#EAE7DF',
+    }
   }
+
+  if (type === 'account') {
+    if (score !== null && score >= 0.8) {
+      return { fill: '#35221F', stroke: '#C65B4A', text: '#C65B4A' }
+    }
+    if (score !== null && score >= 0.5) {
+      return { fill: '#352B1E', stroke: '#D4A15A', text: '#D4A15A' }
+    }
+    if (metadata?.verified) {
+      return { fill: '#222D23', stroke: '#6E8F72', text: '#6E8F72' }
+    }
+    if (metadata?.is_linked) {
+      return { fill: '#22251F', stroke: '#8A8F85', text: '#A7A89E' }
+    }
+    return { fill: '#1A1C19', stroke: '#6B6F67', text: '#A7A89E' }
+  }
+
+  if (type === 'device') {
+    return { fill: '#22251F', stroke: '#8A8F85', text: '#A7A89E' }
+  }
+
+  if (type === 'merchant') {
+    return { fill: '#1A1C19', stroke: '#8A8F85', text: '#A7A89E' }
+  }
+
+  if (type === 'complaint') {
+    return { fill: '#35221F', stroke: '#C65B4A', text: '#C65B4A' }
+  }
+
+  return { fill: '#1A1C19', stroke: '#6B6F67', text: '#EAE7DF' }
 }
 
-function getEdgeColor(type: EdgeType, isPath: boolean, isSelected: boolean): string {
-  if (isSelected) return '#FBBF24'
-  if (isPath) return '#F59E0B'
+function getEdgeColor(type: EdgeType, isPath: boolean, isSelected: boolean, isHighRiskPath: boolean = false): string {
+  if (isSelected) return '#EAE7DF'
+  if (isPath) return isHighRiskPath ? '#C65B4A' : '#D4A15A'
   switch (type) {
     case 'transfer':
-      return '#64748B'
+      return '#3A3F37'
     case 'uses_device':
-      return '#8B5CF6'
+      return '#8A8F85'
     case 'merchant_profile':
-      return '#06B6D4'
+      return '#8A8F85'
     case 'has_complaint':
-      return '#EF4444'
+      return '#C65B4A'
     default:
-      return '#475569'
+      return '#3A3F37'
   }
 }
 
@@ -55,6 +86,7 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
   const [isPathHighlightActive, setIsPathHighlightActive] = useState<boolean>(true)
   const [showAllEdgeAmounts, setShowAllEdgeAmounts] = useState<boolean>(false)
   const [zoomLevel, setZoomLevel] = useState<number>(1)
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
 
   const nodes = evidence?.nodes || []
@@ -175,7 +207,7 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
     return (
       <div className={`evidence-canvas-empty ${className}`} role="region" aria-label="Evidence Graph Area">
         <div className="canvas-empty-state">
-          <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="#6B7280" strokeWidth="1.5">
+          <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="var(--color-text-muted, #7B7F76)" strokeWidth="1.5">
             <circle cx="18" cy="5" r="3" />
             <circle cx="6" cy="12" r="3" />
             <circle cx="18" cy="19" r="3" />
@@ -196,7 +228,7 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
       {/* Plain-English Explanation Banner */}
       <div className="graph-explanation-banner" role="region" aria-label="Investigation Scope Guidance">
         <div className="explanation-title-row">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#60A5FA" strokeWidth="2" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--brand-terracotta, #A56F58)" strokeWidth="2" aria-hidden="true">
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="16" x2="12" y2="12" />
             <line x1="12" y1="8" x2="12.01" y2="8" />
@@ -358,16 +390,19 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
             <defs>
               {/* Arrowheads for different edge types */}
               <marker id="arrow-transfer" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 1 L 10 5 L 0 9 z" fill="#64748B" />
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#3A3F37" />
               </marker>
               <marker id="arrow-path" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#F59E0B" />
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#D4A15A" />
               </marker>
               <marker id="arrow-merchant" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 1 L 10 5 L 0 9 z" fill="#06B6D4" />
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#8A8F85" />
               </marker>
               <marker id="arrow-selected" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#FBBF24" />
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#EAE7DF" />
+              </marker>
+              <marker id="arrow-complaint" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#C65B4A" />
               </marker>
 
               {/* Restrained subtle glow for key trail */}
@@ -389,9 +424,11 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
                   const isPath = pathEdgeSet.has(edge.id)
                   const isSelected = selectedElement?.type === 'edge' && selectedElement.data.id === edge.id
                   const isDimmed = isPathHighlightActive && !isPath && evidencePath.length > 0 && !isSelected
+                  const isIncidentEdge = hoveredNodeId ? (edge.source === hoveredNodeId || edge.target === hoveredNodeId) : false
+                  const isHoverDimmed = hoveredNodeId ? !isIncidentEdge : false
 
                   const color = getEdgeColor(edge.type, isPath, isSelected)
-                  const strokeWidth = isSelected ? 3.5 : isPath && isPathHighlightActive ? 2.8 : 1.4
+                  const strokeWidth = isSelected ? 3.5 : isIncidentEdge ? 2.5 : isPath && isPathHighlightActive ? 2.4 : 1.2
                   const isDashed = edge.type === 'uses_device' || edge.type === 'has_complaint'
 
                   // Arrowhead selection
@@ -399,6 +436,7 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
                   if (isSelected) markerEnd = 'url(#arrow-selected)'
                   else if (isPath && isPathHighlightActive) markerEnd = 'url(#arrow-path)'
                   else if (edge.type === 'merchant_profile') markerEnd = 'url(#arrow-merchant)'
+                  else if (edge.type === 'has_complaint') markerEnd = 'url(#arrow-complaint)'
 
                   // Midpoint for amount tag
                   const midX = (p1.x + p2.x) / 2
@@ -408,6 +446,8 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
                   const shouldShowAmount =
                     edge.amount_inr !== null &&
                     (showAllEdgeAmounts || isSelected || (isPath && isPathHighlightActive))
+
+                  const edgeOpacity = isHoverDimmed ? 0.12 : isDimmed ? 0.25 : isIncidentEdge ? 1 : isPath ? 0.95 : 0.55
 
                   return (
                     <g
@@ -435,7 +475,7 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
                         stroke={color}
                         strokeWidth={strokeWidth}
                         strokeDasharray={isDashed ? '5 4' : undefined}
-                        opacity={isDimmed ? 0.25 : isPath ? 0.95 : 0.45}
+                        opacity={edgeOpacity}
                         markerEnd={markerEnd}
                         filter={isPath && isPathHighlightActive ? 'url(#path-glow)' : undefined}
                       />
@@ -459,7 +499,7 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
                             width="64"
                             height="18"
                             rx="4"
-                            fill="#0A0F1D"
+                            fill="#1A1C19"
                             stroke={color}
                             strokeWidth={isSelected ? '2' : '1'}
                             opacity={isDimmed ? 0.3 : 0.95}
@@ -494,7 +534,7 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
                   const isSelected = selectedElement?.type === 'node' && selectedElement.data.id === node.id
                   const isDimmed = isPathHighlightActive && !isPath && !isTarget && evidencePath.length > 0 && !isSelected
 
-                  const style = getNodeColor(node.type)
+                  const style = getNodeColor(node.type, node.score, isTarget, node.metadata)
                   const nodeRadius = isTarget ? 25 : 18
 
                   return (
@@ -502,6 +542,8 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
                       key={node.id}
                       transform={`translate(${p.x}, ${p.y})`}
                       className={`node-group ${isSelected ? 'selected' : ''}`}
+                      onMouseEnter={() => setHoveredNodeId(node.id)}
+                      onMouseLeave={() => setHoveredNodeId(null)}
                       onClick={(e) => {
                         e.stopPropagation()
                         setSelectedElement({ type: 'node', data: node })
@@ -516,33 +558,24 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
                         }
                       }}
                     >
-                      {/* Target Account Distinctive Double Ring */}
+                      {/* Target Account Distinctive Halo */}
                       {isTarget && (
-                        <>
-                          <circle
-                            r={nodeRadius + 7}
-                            fill="none"
-                            stroke="#F59E0B"
-                            strokeWidth="1.5"
-                            strokeDasharray="4 3"
-                            opacity={0.8}
-                          />
-                          <circle
-                            r={nodeRadius + 3}
-                            fill="none"
-                            stroke="#FBBF24"
-                            strokeWidth="1.5"
-                            opacity={0.6}
-                          />
-                        </>
+                        <circle
+                          r={nodeRadius + 6}
+                          fill="none"
+                          stroke="#D4A15A"
+                          strokeWidth="1.5"
+                          strokeDasharray="4 3"
+                          opacity={0.8}
+                        />
                       )}
 
-                      {/* Explicit Selected Ring (accessible without color alone) */}
+                      {/* Explicit Selected Ring (clear off-white outline) */}
                       {isSelected && (
                         <circle
                           r={nodeRadius + 5}
                           fill="none"
-                          stroke="#FFFFFF"
+                          stroke="#EAE7DF"
                           strokeWidth="2.5"
                           strokeDasharray="3 2"
                         />
@@ -588,7 +621,7 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
                         x="0"
                         y={node.score !== null ? -2 : 4}
                         textAnchor="middle"
-                        fill={isTarget ? '#FFFFFF' : style.text}
+                        fill={isTarget ? '#EAE7DF' : style.text}
                         fontSize={isTarget ? '10.5' : '9.5'}
                         fontWeight="700"
                         fontFamily="var(--font-mono)"
@@ -603,7 +636,7 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
                           x="0"
                           y="10"
                           textAnchor="middle"
-                          fill={node.score >= 0.8 ? '#EF4444' : '#F59E0B'}
+                          fill={node.score >= 0.8 ? '#C65B4A' : '#D4A15A'}
                           fontSize="8"
                           fontFamily="var(--font-mono)"
                           fontWeight="600"
@@ -618,7 +651,7 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
                         x="0"
                         y={nodeRadius + 14}
                         textAnchor="middle"
-                        fill={isTarget ? '#F59E0B' : '#9CA3AF'}
+                        fill={isTarget ? '#D4A15A' : '#7B7F76'}
                         fontSize="8"
                         fontFamily="var(--font-mono)"
                         fontWeight={isTarget ? '700' : '500'}
@@ -980,49 +1013,49 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
             <span className="legend-swatch node-target" aria-hidden="true" />
             <div className="legend-text">
               <strong className="legend-name">Target Account ({targetAccountId})</strong>
-              <span className="legend-desc">Account under review (golden border and accent ring)</span>
+              <span className="legend-desc">Account under review (amber outline &amp; focus halo)</span>
             </div>
           </div>
           <div className="legend-item">
             <span className="legend-swatch node-account" aria-hidden="true" />
             <div className="legend-text">
               <strong className="legend-name">Connected Accounts</strong>
-              <span className="legend-desc">Sender or receiver accounts in 2-hop neighborhood</span>
+              <span className="legend-desc">Sender or receiver accounts in 2-hop neighborhood (neutral grey)</span>
             </div>
           </div>
           <div className="legend-item">
             <span className="legend-swatch edge-transfer" aria-hidden="true" />
             <div className="legend-text">
               <strong className="legend-name">Directed Money Transfers</strong>
-              <span className="legend-desc">Slate arrow indicates flow of money (sender &rarr; receiver)</span>
+              <span className="legend-desc">Low-emphasis grey arrow indicates flow of money (sender &rarr; receiver)</span>
             </div>
           </div>
           <div className="legend-item">
             <span className="legend-swatch edge-key-trail" aria-hidden="true" />
             <div className="legend-text">
               <strong className="legend-name">Key Transaction Trail</strong>
-              <span className="legend-desc">Highlighted suspicious transaction walk touching target</span>
+              <span className="legend-desc">Highlighted suspicious transaction walk (amber route)</span>
             </div>
           </div>
           <div className="legend-item">
             <span className="legend-swatch node-device" aria-hidden="true" />
             <div className="legend-text">
               <strong className="legend-name">Shared Devices</strong>
-              <span className="legend-desc">Hardware/phones associated with multiple sender accounts</span>
+              <span className="legend-desc">Hardware/phones associated with multiple sender accounts (muted grey)</span>
             </div>
           </div>
           <div className="legend-item">
             <span className="legend-swatch node-merchant" aria-hidden="true" />
             <div className="legend-text">
               <strong className="legend-name">Merchants &amp; Aggregators</strong>
-              <span className="legend-desc">Commercial endpoints or cash-out aggregators</span>
+              <span className="legend-desc">Commercial endpoints or cash-out aggregators (muted grey)</span>
             </div>
           </div>
           <div className="legend-item">
             <span className="legend-swatch node-complaint" aria-hidden="true" />
             <div className="legend-text">
               <strong className="legend-name">Consumer Complaints</strong>
-              <span className="legend-desc">Fraud grievances registered by victim accounts</span>
+              <span className="legend-desc">Fraud grievances registered by victim accounts (red flag)</span>
             </div>
           </div>
         </div>

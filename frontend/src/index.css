@@ -1,63 +1,78 @@
 /* ==========================================================================
-   TraceUPI — Design System & Tokens
-   Informed by ui-ux-pro-max design intelligence for fintech investigation UI
+   TraceUPI — Forensic Editorial Dark Theme Design System & Tokens
+   Authoritative Visual Specification
    ========================================================================== */
 
 :root {
-  /* Color Palette - Dark Canvas & Surfaces */
-  --bg-canvas: #0A0F1D;
-  --bg-surface: #111827;
-  --bg-surface-elevated: #1E293B;
-  --bg-surface-hover: #273549;
-  --bg-glass: rgba(17, 24, 39, 0.75);
-  --bg-glass-card: rgba(30, 41, 59, 0.65);
+  /* Core Palette */
+  --bg-canvas: #121411;
+  --bg-surface: #1A1C19;
+  --bg-surface-elevated: #22251F;
+  --bg-surface-hover: #2A2D26;
+  --bg-glass: rgba(26, 28, 25, 0.95);
+  --bg-glass-card: rgba(34, 37, 31, 0.95);
 
   /* Borders & Dividers */
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-card: rgba(255, 255, 255, 0.12);
-  --border-focus: #F59E0B;
-  --border-accent: rgba(245, 158, 11, 0.3);
+  --border-subtle: #2C3028;
+  --border-strong: #41443B;
+  --border-card: #2C3028;
+  --border-focus: #EAE7DF;
+  --border-accent: #A56F58;
 
   /* Typography Colors */
-  --text-primary: #F8FAFC;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
-  --text-inverse: #0A0F1D;
+  --text-primary: #EAE7DF;
+  --text-secondary: #A7A89E;
+  --text-muted: #7B7F76;
+  --text-inverse: #121411;
 
-  /* Semantic Alert & Entity Colors */
-  --color-amber: #F59E0B;
-  --color-amber-hover: #D97706;
-  --color-amber-bg: rgba(245, 158, 11, 0.12);
+  /* Brand Palette (Terracotta - identity, not fraud) */
+  --brand-terracotta: #A56F58;
+  --brand-hover: #B78066;
+  --brand-bg-subtle: rgba(165, 111, 88, 0.15);
+  --color-amber: #A56F58;
+  --color-amber-hover: #B78066;
+  --color-amber-bg: rgba(165, 111, 88, 0.15);
 
-  --color-red: #EF4444;
-  --color-red-bg: rgba(239, 68, 68, 0.12);
+  /* Semantic Palette */
+  --color-high-risk: #C65B4A;
+  --color-high-risk-bg: #35221F;
+  --color-red: #C65B4A;
+  --color-red-bg: #35221F;
 
-  --color-violet: #8B5CF6;
-  --color-violet-bg: rgba(139, 92, 246, 0.12);
+  --color-warning: #D4A15A;
+  --color-warning-bg: #352B1E;
 
-  --color-cyan: #06B6D4;
-  --color-cyan-bg: rgba(6, 182, 212, 0.12);
+  --color-verified: #6E8F72;
+  --color-verified-bg: #222D23;
+  --color-emerald: #6E8F72;
+  --color-emerald-bg: #222D23;
 
-  --color-emerald: #10B981;
-  --color-emerald-bg: rgba(16, 185, 129, 0.12);
+  --color-neutral: #6B6F67;
+  --color-neutral-bg: #1A1C19;
+
+  --color-linked: #8A8F85;
+  --color-linked-bg: #22251F;
+
+  --color-edge-default: #3A3F37;
 
   /* Typography */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'Fira Code', 'SF Mono', Consolas, monospace;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-sans: 'Inter', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 
-  /* Elevation & Shadows */
+  /* Elevation & Shadows (Restrained, subtle, no neon glows) */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 4px 12px -1px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.55);
-  --shadow-glow: 0 0 20px -3px rgba(245, 158, 11, 0.25);
+  --shadow-md: 0 4px 12px -1px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 8px 24px -2px rgba(0, 0, 0, 0.45);
+  --shadow-glow: none;
 
   /* Radii */
   --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-full: 9999px;
+  --radius-md: 8px; /* 8px input/button radius */
+  --radius-lg: 12px; /* 12px card radius */
+  --radius-full: 9999px; /* Pill-shaped status badges */
 
-  /* Spacing Scale */
+  /* Spacing Scale (4px base) */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -98,20 +113,32 @@ html, body {
   outline-offset: 2px;
 }
 
+/* Typography Utility Classes */
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+.font-sans {
+  font-family: var(--font-sans);
+}
+
 /* Tabular numbers for monospaced values */
 .font-mono, code, pre {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
-/* Link & Button baseline */
+/* Baseline Elements */
+button, input, select, textarea {
+  font-family: var(--font-sans);
+}
+
 a {
   color: inherit;
   text-decoration: none;
 }
 
 button {
-  font-family: inherit;
   cursor: pointer;
   border: none;
   background: none;

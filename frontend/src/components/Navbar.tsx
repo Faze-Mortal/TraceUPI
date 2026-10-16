@@ -27,11 +27,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
             strokeLinejoin="round"
             aria-hidden="true"
           >
-            <circle cx="12" cy="12" r="10" stroke="#F59E0B" />
-            <path d="M12 2a10 10 0 0 1 10 10" stroke="#F59E0B" />
-            <path d="M12 6a6 6 0 0 1 6 6" stroke="#FBBF24" />
-            <circle cx="12" cy="12" r="2" fill="#F59E0B" />
-            <line x1="12" y1="12" x2="19" y2="5" stroke="#F59E0B" />
+            <circle cx="12" cy="12" r="10" stroke="var(--brand-terracotta, #A56F58)" />
+            <path d="M12 2a10 10 0 0 1 10 10" stroke="var(--brand-terracotta, #A56F58)" />
+            <path d="M12 6a6 6 0 0 1 6 6" stroke="var(--brand-terracotta-hover, #B78066)" />
+            <circle cx="12" cy="12" r="2" fill="var(--brand-terracotta, #A56F58)" />
+            <line x1="12" y1="12" x2="19" y2="5" stroke="var(--brand-terracotta, #A56F58)" />
           </svg>
           <span className="brand-name">
             Trace<span className="brand-accent">UPI</span>

@@ -428,7 +428,7 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
         {/* Pipeline Error Banner */}
         {pipelineError && (
           <div className="alert-banner error" role="alert">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#EF4444" strokeWidth="2">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--color-high-risk, #C65B4A)" strokeWidth="2">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -440,7 +440,7 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
         {/* Alerts Fetch Error Banner */}
         {alertsError && (
           <div className="alert-banner error" role="alert">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#EF4444" strokeWidth="2">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--color-high-risk, #C65B4A)" strokeWidth="2">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -460,7 +460,7 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
         {isAnalysisNotRun && (
           <div className="pre-analysis-banner" role="region" aria-labelledby="pre-analysis-title">
             <div className="pre-analysis-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#F59E0B" strokeWidth="2">
+              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--color-warning, #D4A15A)" strokeWidth="2">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" strokeWidth="2.5" />
@@ -659,7 +659,7 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
                       width="20"
                       height="20"
                       fill="none"
-                      stroke="#06B6D4"
+                      stroke="var(--brand-terracotta, #A56F58)"
                       strokeWidth="2"
                       aria-hidden="true"
                     >
@@ -716,7 +716,7 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
               ) : (
                 <div className="empty-section-prompt">
                   <div className="empty-prompt-box">
-                    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#6B7280" strokeWidth="1.5">
+                    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="var(--color-text-muted, #7B7F76)" strokeWidth="1.5">
                       <circle cx="18" cy="5" r="3" />
                       <circle cx="6" cy="12" r="3" />
                       <circle cx="18" cy="19" r="3" />
@@ -754,7 +754,7 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
                       width="20"
                       height="20"
                       fill="none"
-                      stroke="#8B5CF6"
+                      stroke="var(--brand-terracotta, #A56F58)"
                       strokeWidth="2"
                       aria-hidden="true"
                     >
