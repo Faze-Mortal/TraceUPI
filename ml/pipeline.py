@@ -571,7 +571,7 @@ def run_analysis(
         alert_summaries.append(alert_summary)
 
     metrics = None
-    if metrics_available:
+    if metrics_available and as_of is None:
         from ml.evaluate import compute_contract_v12_metrics
         metrics = compute_contract_v12_metrics(
             transactions=all_raw_transactions or transactions,

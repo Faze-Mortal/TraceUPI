@@ -408,6 +408,70 @@ class TestApiRoutes(unittest.TestCase):
             ["ACC_0001"],
         )
 
+    def test_historical_replay_does_not_overwrite_global_benchmark_metrics(self):
+        """Historical replay before mule attacks preserves global benchmark metrics and restricts alerts."""
+        # 1. Full-history run initializes global benchmark metrics
+        run_full = self.client.post("/api/pipeline/run", json={})
+        self.assertEqual(run_full.status_code, 200)
+        self.assertTrue(run_full.json()["metrics_available"])
+        self.assertEqual(run_full.json()["n_alerts"], 303)
+
+        # 2. Verify global benchmark metrics are TP=26, FP=1, FN=0
+        metrics_resp = self.client.get("/api/metrics")
+        self.assertEqual(metrics_resp.status_code, 200)
+        ml_m = metrics_resp.json()["ml"]
+        self.assertEqual(ml_m["true_positives"], 26)
+        self.assertEqual(ml_m["false_positives"], 1)
+        self.assertEqual(ml_m["false_negatives"], 0)
+        self.assertEqual(ml_m["precision"], 0.963)
+        self.assertEqual(ml_m["recall"], 1.0)
+        self.assertEqual(ml_m["f1"], 0.9812)
+
+        # 3. Point-in-time replay prior to mule attacks (2026-10-01)
+        replay = self.client.post("/api/pipeline/run", json={"as_of": "2026-10-01T15:00:00Z"})
+        self.assertEqual(replay.status_code, 200)
+        self.assertEqual(replay.json()["n_alerts"], 20)
+        self.assertEqual(replay.json()["as_of"], "2026-10-01T15:00:00Z")
+
+        # 4. Global benchmark metrics must NOT be overwritten with TP=0, FP=2, FN=26
+        metrics_after_replay = self.client.get("/api/metrics")
+        self.assertEqual(metrics_after_replay.status_code, 200)
+        ml_after = metrics_after_replay.json()["ml"]
+        self.assertEqual(ml_after["true_positives"], 26)
+        self.assertEqual(ml_after["false_positives"], 1)
+        self.assertEqual(ml_after["false_negatives"], 0)
+        self.assertEqual(ml_after["precision"], 0.963)
+        self.assertEqual(ml_after["recall"], 1.0)
+        self.assertEqual(ml_after["f1"], 0.9812)
+
+        # 5. Historical alerts and evidence strictly obey as_of cutoff without leaking future events
+        alerts_resp = self.client.get("/api/alerts")
+        self.assertEqual(alerts_resp.status_code, 200)
+        alerts = alerts_resp.json()["alerts"]
+        self.assertEqual(len(alerts), 20)
+
+        # Check detail evidence of alerts
+        for a in alerts[:5]:
+            detail_resp = self.client.get(f"/api/alerts/{a['alert_id']}")
+            self.assertEqual(detail_resp.status_code, 200)
+            evidence = detail_resp.json()["evidence"]
+            for edge in evidence["edges"]:
+                if edge.get("timestamp"):
+                    self.assertLessEqual(edge["timestamp"], "2026-10-01T15:00:00Z")
+
+    def test_cold_start_historical_replay_returns_metrics_unavailable(self):
+        """Historical replay before any full analysis leaves metrics unavailable per Contract §8.3."""
+        fresh_store = InvestigationStore()
+        with patch("backend.main.get_investigation_store", return_value=fresh_store):
+            replay = self.client.post("/api/pipeline/run", json={"as_of": "2026-10-01T15:00:00Z"})
+            self.assertEqual(replay.status_code, 200)
+            self.assertFalse(replay.json()["metrics_available"])
+
+            # /api/metrics returns 404 metrics_unavailable
+            metrics_resp = self.client.get("/api/metrics")
+            self.assertEqual(metrics_resp.status_code, 404)
+            self.assertEqual(metrics_resp.json(), {"detail": "metrics_unavailable"})
+
 
 if __name__ == "__main__":
     unittest.main()
