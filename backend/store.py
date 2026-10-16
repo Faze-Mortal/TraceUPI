@@ -256,8 +256,18 @@ class InvestigationStore:
             self._account_by_alert_id = new_account_by_alert_id
             self._as_of = snapshot.as_of
             self._n_transactions = snapshot.n_transactions
-            self._metrics = copy.deepcopy(snapshot.metrics)
-            self._metrics_available = snapshot.metrics_available
+            if snapshot.as_of is None:
+                self._metrics = copy.deepcopy(snapshot.metrics) if snapshot.metrics is not None else None
+                self._metrics_available = snapshot.metrics_available
+            else:
+                # Historical replay snapshot (as_of is not None):
+                # A historical slice must not overwrite existing global benchmark metrics.
+                if snapshot.metrics is not None:
+                    self._metrics = copy.deepcopy(snapshot.metrics)
+                    self._metrics_available = snapshot.metrics_available
+                elif not self._has_run:
+                    self._metrics = None
+                    self._metrics_available = False
             self._has_run = True
 
     def list_active_alerts(self) -> list[Alert]:

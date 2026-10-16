@@ -352,6 +352,102 @@ class TestMetricsEngine(unittest.TestCase):
         self.assertEqual(m50["baseline"]["budget_metrics"]["k_effective"], 50)
         self.assertNotIn("_budget_metrics_by_k", m50)
 
+    def test_10_full_history_benchmark_metrics_expanded_dataset(self):
+        """Full-history benchmark metrics remain TP=26, FP=1, FN=0 on current synthetic fixture."""
+        res = run_analysis(self.expanded_txns, as_of=None)
+        self.assertTrue(res["metrics_available"])
+        self.assertIsNotNone(res["metrics"])
+        m = res["metrics"]["ml"]
+        self.assertEqual(m["true_positives"], 26)
+        self.assertEqual(m["false_positives"], 1)
+        self.assertEqual(m["false_negatives"], 0)
+        self.assertEqual(m["precision"], 0.963)
+        self.assertEqual(m["recall"], 1.0)
+        self.assertEqual(m["f1"], 0.9812)
+        self.assertEqual(m["threshold"], 0.5)
+        self.assertEqual(m["fairness"]["fpr_benign_shared_device"], 0.0)
+
+    def test_11_historical_cutoff_does_not_evaluate_against_future_ground_truth(self):
+        """Historical cutoff before mule attacks does not compute false degraded metrics."""
+        res = run_analysis(self.expanded_txns, as_of="2026-10-01T15:00:00Z")
+        self.assertFalse(res["metrics_available"])
+        self.assertIsNone(res["metrics"])
+        self.assertEqual(res["as_of"], "2026-10-01T15:00:00Z")
+        self.assertEqual(res["n_transactions"], 189)
+        # Alerts are strictly historical up to cutoff
+        self.assertEqual(len(res["alerts"]), 20)
+        for alert in res["alerts"]:
+            for edge in alert.get("evidence", {}).get("edges", []):
+                if edge.get("timestamp"):
+                    self.assertLessEqual(edge["timestamp"], "2026-10-01T15:00:00Z")
+
+    def test_12_historical_cutoff_does_not_overwrite_global_benchmark_in_store(self):
+        """A historical cutoff before mule attacks preserves global benchmark metrics in store."""
+        try:
+            from backend.store import InvestigationStore, AnalysisSnapshot
+        except ImportError:
+            return
+
+        full_res = run_analysis(self.expanded_txns, as_of=None)
+        self.assertTrue(full_res["metrics_available"])
+
+        store = InvestigationStore()
+        store.replace_analysis(
+            AnalysisSnapshot(
+                n_transactions=full_res["n_transactions"],
+                as_of=None,
+                alerts=(),
+                metrics=full_res["metrics"],
+                metrics_available=True,
+            )
+        )
+        self.assertEqual(store.get_metrics()["ml"]["true_positives"], 26)
+
+        hist_res = run_analysis(self.expanded_txns, as_of="2026-10-01T15:00:00Z")
+        self.assertIsNone(hist_res["metrics"])
+
+        # Ingest historical snapshot
+        store.replace_analysis(
+            AnalysisSnapshot(
+                n_transactions=hist_res["n_transactions"],
+                as_of=hist_res["as_of"],
+                alerts=(),
+                metrics=hist_res["metrics"],
+                metrics_available=hist_res["metrics_available"],
+            )
+        )
+
+        # Global benchmark metrics must NOT be overwritten with TP=0, FP=2, FN=26
+        preserved = store.get_metrics()
+        self.assertIsNotNone(preserved)
+        self.assertEqual(preserved["ml"]["true_positives"], 26)
+        self.assertEqual(preserved["ml"]["false_positives"], 1)
+        self.assertEqual(preserved["ml"]["false_negatives"], 0)
+        self.assertEqual(preserved["ml"]["precision"], 0.963)
+        self.assertEqual(preserved["ml"]["recall"], 1.0)
+        self.assertEqual(preserved["ml"]["f1"], 0.9812)
+        self.assertTrue(store.metrics_available())
+
+    def test_13_cold_start_historical_cutoff_leaves_metrics_unavailable(self):
+        """Historical replay before any full-history run leaves metrics unavailable per contract."""
+        try:
+            from backend.store import InvestigationStore, AnalysisSnapshot
+        except ImportError:
+            return
+
+        store = InvestigationStore()
+        store.replace_analysis(
+            AnalysisSnapshot(
+                n_transactions=20,
+                as_of="2026-10-01T15:00:00Z",
+                alerts=(),
+                metrics=None,
+                metrics_available=False,
+            )
+        )
+        self.assertTrue(store.has_analysis())
+        self.assertFalse(store.metrics_available())
+        self.assertIsNone(store.get_metrics())
 
 
 if __name__ == "__main__":

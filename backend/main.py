@@ -124,7 +124,7 @@ def run_pipeline(
     return PipelineRunResponse(
         n_transactions=snapshot.n_transactions,
         n_alerts=len(snapshot.alerts),
-        metrics_available=snapshot.metrics_available,
+        metrics_available=store.metrics_available(),
         as_of=snapshot.as_of,
     )
 
