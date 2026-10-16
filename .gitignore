@@ -45,3 +45,7 @@ data/
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Agent scratch and audit inventory
+scratch/
+agy-*
