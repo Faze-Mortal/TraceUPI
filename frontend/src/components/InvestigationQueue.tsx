@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useRef } from 'react'
 import type { AlertPriority, AlertSummary, BudgetK, ReviewStatus } from '../types/api'
 
 interface InvestigationQueueProps {
@@ -81,6 +81,12 @@ export const InvestigationQueue: React.FC<InvestigationQueueProps> = ({
       return a.account_id.localeCompare(b.account_id)
     })
   }, [alerts, searchQuery])
+
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([])
+
+  const selectedAlertIndex = useMemo(() => {
+    return filteredAlerts.findIndex((a) => a.alert_id === selectedAlertId)
+  }, [filteredAlerts, selectedAlertId])
 
   return (
     <section className="workbench-column queue-column" aria-labelledby="queue-heading">
@@ -214,9 +220,15 @@ export const InvestigationQueue: React.FC<InvestigationQueueProps> = ({
             </p>
           </div>
         ) : (
-          <div className="queue-list" role="listbox" aria-label="Investigation Alerts">
-            {filteredAlerts.map((alert) => {
+          <div
+            className="queue-list"
+            role="listbox"
+            aria-label="Investigation Alerts"
+            aria-activedescendant={selectedAlertId ? `alert-card-${selectedAlertId}` : undefined}
+          >
+            {filteredAlerts.map((alert, idx) => {
               const isSelected = alert.alert_id === selectedAlertId
+              const isFocusable = isSelected || (selectedAlertIndex === -1 && idx === 0)
               const priorityClass = getPriorityClass(alert.priority)
               const statusClass = getStatusClass(alert.status)
               const scoreTone = getScoreTone(alert.ml.score)
@@ -226,13 +238,44 @@ export const InvestigationQueue: React.FC<InvestigationQueueProps> = ({
                 <div
                   key={alert.alert_id}
                   id={`alert-card-${alert.alert_id}`}
+                  ref={(el) => {
+                    cardRefs.current[idx] = el
+                  }}
                   role="option"
                   aria-selected={isSelected}
-                  tabIndex={0}
+                  tabIndex={isFocusable ? 0 : -1}
+                  aria-label={`Alert ${alert.alert_id}, Account ${alert.account_id}, Risk score ${alert.ml.score.toFixed(4)}, Priority ${alert.priority}, Status ${alert.status}`}
                   className={`alert-card ${isSelected ? 'selected' : ''}`}
                   onClick={() => onSelectAlert(alert.alert_id)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      const nextIdx = Math.min(idx + 1, filteredAlerts.length - 1)
+                      if (nextIdx !== idx) {
+                        onSelectAlert(filteredAlerts[nextIdx].alert_id)
+                        cardRefs.current[nextIdx]?.focus()
+                      }
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      const prevIdx = Math.max(idx - 1, 0)
+                      if (prevIdx !== idx) {
+                        onSelectAlert(filteredAlerts[prevIdx].alert_id)
+                        cardRefs.current[prevIdx]?.focus()
+                      }
+                    } else if (e.key === 'Home') {
+                      e.preventDefault()
+                      if (filteredAlerts.length > 0) {
+                        onSelectAlert(filteredAlerts[0].alert_id)
+                        cardRefs.current[0]?.focus()
+                      }
+                    } else if (e.key === 'End') {
+                      e.preventDefault()
+                      const lastIdx = filteredAlerts.length - 1
+                      if (lastIdx >= 0) {
+                        onSelectAlert(filteredAlerts[lastIdx].alert_id)
+                        cardRefs.current[lastIdx]?.focus()
+                      }
+                    } else if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault()
                       onSelectAlert(alert.alert_id)
                     }

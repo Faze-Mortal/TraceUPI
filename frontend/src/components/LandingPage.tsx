@@ -6,7 +6,7 @@ interface LandingPageProps {
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onOpenDashboard }) => {
   return (
-    <main className="landing-page">
+    <main id="main-content" className="landing-page" tabIndex={-1}>
       {/* 1. Hero Section */}
       <section className="hero-section" aria-labelledby="hero-heading">
         <div className="hero-content">

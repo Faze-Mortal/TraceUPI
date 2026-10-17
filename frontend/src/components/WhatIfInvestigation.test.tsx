@@ -246,4 +246,22 @@ describe('WhatIfInvestigation Component', () => {
       /Invalid intervention: invalid_counterfactual_request/i
     )
   })
+
+  it('announces completion to screen readers via polite live region', async () => {
+    vi.mocked(apiClient.runCounterfactual).mockResolvedValue(mockSuccessResponse)
+
+    render(<WhatIfInvestigation alert={mockAlert} />)
+
+    fireEvent.click(screen.getByTestId('edge-checkbox-E1'))
+    fireEvent.click(screen.getByTestId('btn-run-whatif'))
+
+    await screen.findByTestId('what-if-results-panel')
+
+    const announcement = screen.getByTestId('whatif-live-announcement')
+    expect(announcement).toHaveAttribute('role', 'status')
+    expect(announcement).toHaveAttribute('aria-live', 'polite')
+    expect(announcement).toHaveTextContent(
+      /Hypothetical analysis complete\. Original risk score 0\.9300, hypothetical risk score 0\.2100, score delta -0\.7200\./i
+    )
+  })
 })

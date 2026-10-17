@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { DashboardWorkbench } from './DashboardWorkbench'
+import { DashboardWorkbench, validateAndFormatUtcCutoff } from './DashboardWorkbench'
 import { apiClient, ApiError } from '../api/client'
 import type { Alert, AlertSummary, PipelineRunResponse } from '../types/api'
 
@@ -13,6 +13,7 @@ vi.mock('../api/client', async () => {
       getAlerts: vi.fn(),
       getAlert: vi.fn(),
       updateAlertReview: vi.fn(),
+      getMetrics: vi.fn(),
     },
   }
 })
@@ -244,6 +245,12 @@ describe('DashboardWorkbench Component', () => {
     const queueTab = screen.getByTestId('tab-section-queue')
     fireEvent.click(queueTab)
     expect(screen.getByTestId('section-queue-container')).toBeInTheDocument()
+
+    // Switch to Section 4: Benchmark Metrics tab
+    const metricsTab = screen.getByTestId('tab-section-metrics')
+    fireEvent.click(metricsTab)
+    expect(screen.getByTestId('section-metrics-container')).toBeInTheDocument()
+    expect(apiClient.getMetrics).toHaveBeenCalled()
   })
 
   it('clicking Investigate Graph button navigates directly to Section B with active context banner', async () => {
@@ -370,7 +377,7 @@ describe('DashboardWorkbench Component', () => {
     expect(screen.getByText(/Rerunning fraud-risk analysis evaluates only transactions ingested on or before this time/i)).toBeInTheDocument()
   })
 
-  it('configures historical cutoff with date and time picker and explicitly converts to UTC', async () => {
+  it('configures historical cutoff with date and time picker directly in UTC', async () => {
     vi.mocked(apiClient.getAlerts).mockResolvedValue([mockAlertSummary1])
     vi.mocked(apiClient.runPipeline).mockResolvedValue({
       n_transactions: 50,
@@ -389,9 +396,10 @@ describe('DashboardWorkbench Component', () => {
     const timeSelect = screen.getByTestId('select-asof-time')
     fireEvent.change(timeSelect, { target: { value: '14:30' } })
 
-    // Active UTC display appears and ends in 'Z'
+    // Explicit UTC display appears and matches exact string
     const utcDisplay = await screen.findByTestId('active-cutoff-utc')
-    expect(utcDisplay.textContent).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/)
+    expect(utcDisplay.textContent).toBe('2026-10-01T14:30:00Z')
+    expect(screen.getByText('2026-10-01 14:30 UTC')).toBeInTheDocument()
 
     // Crucial check: changing date and time did NOT trigger runPipeline automatically!
     expect(apiClient.runPipeline).not.toHaveBeenCalled()
@@ -400,10 +408,10 @@ describe('DashboardWorkbench Component', () => {
     const runBtn = screen.getByRole('button', { name: /Run fraud-risk analysis/i })
     fireEvent.click(runBtn)
 
-    // Verify pipeline was called with the calculated UTC cutoff
+    // Verify pipeline was called with the exact UTC cutoff
     await waitFor(() => {
       expect(apiClient.runPipeline).toHaveBeenCalledWith({
-        as_of: utcDisplay.textContent,
+        as_of: '2026-10-01T14:30:00Z',
       })
     })
 
@@ -414,4 +422,144 @@ describe('DashboardWorkbench Component', () => {
     // Mode is restored to full history
     expect(screen.getByText(/Active Mode: Full history \(no historical cutoff\)/i)).toBeInTheDocument()
   })
+
+  it('displays inline validation error for impossible calendar dates and prevents cutoff activation', async () => {
+    vi.mocked(apiClient.getAlerts).mockResolvedValue([mockAlertSummary1])
+    render(<DashboardWorkbench onBackToOverview={vi.fn()} />)
+
+    const dateInput = screen.getByTestId('input-asof-date')
+    // In jsdom, input[type="date"] sanitizes invalid calendar dates to "" per WHATWG spec.
+    // Changing type to text allows verifying the component's inline validation and error display.
+    dateInput.setAttribute('type', 'text')
+    fireEvent.change(dateInput, { target: { value: '2026-02-31' } })
+
+    // Error message appears
+    const errorAlert = await screen.findByTestId('cutoff-error-text')
+    expect(errorAlert).toBeInTheDocument()
+    expect(errorAlert.textContent).toMatch(/Invalid calendar date: 2026-02 has 28 days/i)
+
+    // Cutoff display remains in full history mode
+    expect(screen.getByTestId('cutoff-display-empty')).toBeInTheDocument()
+    expect(screen.queryByTestId('active-cutoff-utc')).not.toBeInTheDocument()
+  })
+
+  it('announces pipeline run completion and failure to screen readers via polite live region', async () => {
+    vi.mocked(apiClient.getAlerts).mockResolvedValue([mockAlertSummary1])
+    vi.mocked(apiClient.runPipeline)
+      .mockResolvedValueOnce({
+        n_transactions: 100,
+        n_alerts: 5,
+        metrics_available: true,
+        as_of: '2026-10-01T12:00:00Z',
+      })
+      .mockRejectedValueOnce(new Error('Connection timeout'))
+
+    render(<DashboardWorkbench onBackToOverview={vi.fn()} />)
+
+    const runBtn = screen.getByRole('button', { name: /Run fraud-risk analysis/i })
+    fireEvent.click(runBtn)
+
+    await waitFor(() => {
+      const announcement = screen.getByTestId('workbench-live-announcement')
+      expect(announcement).toHaveAttribute('role', 'status')
+      expect(announcement).toHaveAttribute('aria-live', 'polite')
+      expect(announcement).toHaveTextContent(
+        /Fraud-risk analysis completed: 100 transactions analyzed, 5 alerts generated\./i
+      )
+    })
+
+    // Now test failure announcement
+    fireEvent.click(runBtn)
+
+    await waitFor(() => {
+      const announcement = screen.getByTestId('workbench-live-announcement')
+      expect(announcement).toHaveTextContent(/Fraud-risk analysis failed: Connection timeout/i)
+    })
+  })
 })
+
+describe('validateAndFormatUtcCutoff unit validation', () => {
+  it('formats valid dates and times directly into exact UTC ISO string', () => {
+    const res = validateAndFormatUtcCutoff('2026-10-01', '14:30')
+    expect(res).toEqual({ utcIso: '2026-10-01T14:30:00Z', error: null })
+  })
+
+  it('handles boundary dates and times correctly', () => {
+    // Midnight start of year
+    expect(validateAndFormatUtcCutoff('2026-01-01', '00:00')).toEqual({
+      utcIso: '2026-01-01T00:00:00Z',
+      error: null,
+    })
+
+    // End of year
+    expect(validateAndFormatUtcCutoff('2026-12-31', '23:30')).toEqual({
+      utcIso: '2026-12-31T23:30:00Z',
+      error: null,
+    })
+
+    // Month day boundaries (30-day month)
+    expect(validateAndFormatUtcCutoff('2026-04-30', '12:00')).toEqual({
+      utcIso: '2026-04-30T12:00:00Z',
+      error: null,
+    })
+
+    // Non-leap year February 28
+    expect(validateAndFormatUtcCutoff('2026-02-28', '12:00')).toEqual({
+      utcIso: '2026-02-28T12:00:00Z',
+      error: null,
+    })
+
+    // Leap year February 29
+    expect(validateAndFormatUtcCutoff('2024-02-29', '12:00')).toEqual({
+      utcIso: '2024-02-29T12:00:00Z',
+      error: null,
+    })
+  })
+
+  it('rejects impossible calendar dates and out-of-range components', () => {
+    // Non-leap year Feb 29
+    const feb29 = validateAndFormatUtcCutoff('2026-02-29', '12:00')
+    expect(feb29.utcIso).toBeNull()
+    expect(feb29.error).toMatch(/2026-02 has 28 days/i)
+
+    // 30-day month on day 31
+    const apr31 = validateAndFormatUtcCutoff('2026-04-31', '12:00')
+    expect(apr31.utcIso).toBeNull()
+    expect(apr31.error).toMatch(/2026-04 has 30 days/i)
+
+    // Month out of range
+    const month13 = validateAndFormatUtcCutoff('2026-13-01', '12:00')
+    expect(month13.utcIso).toBeNull()
+    expect(month13.error).toMatch(/Month must be between 01 and 12/i)
+
+    // Day 0
+    const day0 = validateAndFormatUtcCutoff('2026-10-00', '12:00')
+    expect(day0.utcIso).toBeNull()
+    expect(day0.error).toMatch(/has 31 days/i)
+
+    // Malformed formats
+    expect(validateAndFormatUtcCutoff('not-a-date', '12:00').error).toMatch(/Invalid date format/i)
+    expect(validateAndFormatUtcCutoff('2026-10-01', '99:00').error).toMatch(/Hours must be between 00 and 23/i)
+  })
+
+  it('demonstrates timezone-independence with explicit local vs UTC comparison', () => {
+    const inputDate = '2026-10-01'
+    const inputTime = '14:30'
+
+    // The direct UTC formatter ignores local offset completely
+    const { utcIso } = validateAndFormatUtcCutoff(inputDate, inputTime)
+    expect(utcIso).toBe('2026-10-01T14:30:00Z')
+
+    // Self-check: verify that if local time has a non-zero offset, legacy new Date().toISOString()
+    // shifts the hour, whereas validateAndFormatUtcCutoff remains exactly 14:30:00Z.
+    const localDate = new Date(`${inputDate}T${inputTime}:00`)
+    const tzOffsetMinutes = localDate.getTimezoneOffset()
+    if (tzOffsetMinutes !== 0) {
+      // Proves that legacy parsing produces a shifted UTC string
+      expect(localDate.toISOString()).not.toBe('2026-10-01T14:30:00.000Z')
+    }
+    // validateAndFormatUtcCutoff is guaranteed invariant to timezone offset
+    expect(utcIso).toBe('2026-10-01T14:30:00Z')
+  })
+})
+

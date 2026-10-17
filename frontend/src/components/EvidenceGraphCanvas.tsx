@@ -375,6 +375,34 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
       {/* Main Tab Panels */}
       {activeTab === 'canvas' ? (
         <div id="panel-canvas-view" role="tabpanel" aria-labelledby="tab-canvas-view" className="canvas-wrapper">
+          {/* Mobile Alternative View Discovery Banner */}
+          <div className="graph-mobile-alt-banner" role="note" aria-label="Alternative View Suggestions">
+            <div className="alt-banner-text">
+              <span className="alt-banner-icon" aria-hidden="true">💡</span>
+              <span>
+                Graph details may be compact on smaller screens. Switch to <strong>Accessible Table</strong> or <strong>Timeline</strong> for touch-friendly review.
+              </span>
+            </div>
+            <div className="alt-banner-actions">
+              <button
+                type="button"
+                className="btn-alt-switch font-mono"
+                onClick={() => setActiveTab('table')}
+                data-testid="btn-switch-table-alt"
+              >
+                Table View &rarr;
+              </button>
+              <button
+                type="button"
+                className="btn-alt-switch font-mono"
+                onClick={() => setActiveTab('timeline')}
+                data-testid="btn-switch-timeline-alt"
+              >
+                Timeline ({timelineEvents.length}) &rarr;
+              </button>
+            </div>
+          </div>
+
           <svg
             ref={svgRef}
             viewBox={`0 0 ${width} ${height}`}
@@ -671,7 +699,12 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
         <div id="panel-table-view" role="tabpanel" aria-labelledby="tab-table-view" className="table-view-wrapper">
           <div className="table-section">
             <h4 className="table-section-title">1. Graph Entities ({nodes.length} Nodes)</h4>
-            <div className="table-scroll-container">
+            <div
+              className="table-scroll-container"
+              role="region"
+              aria-label="Participating Entities Table"
+              tabIndex={0}
+            >
               <table className="accessible-graph-table" aria-label="Evidence Graph Nodes Table">
                 <thead>
                   <tr>
@@ -713,7 +746,12 @@ export const EvidenceGraphCanvas: React.FC<EvidenceGraphCanvasProps> = ({
 
           <div className="table-section">
             <h4 className="table-section-title">2. Financial Transfers & Edges ({edges.length} Edges)</h4>
-            <div className="table-scroll-container">
+            <div
+              className="table-scroll-container"
+              role="region"
+              aria-label="Financial Transfers and Connections Table"
+              tabIndex={0}
+            >
               <table className="accessible-graph-table" aria-label="Evidence Graph Edges Table">
                 <thead>
                   <tr>
