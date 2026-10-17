@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { apiClient, ApiError } from './client'
-import type { Alert, AlertsResponse, AlertSummary, PipelineRunResponse } from '../types/api'
+import type { Alert, AlertsResponse, AlertSummary, MetricsResponse, PipelineRunResponse } from '../types/api'
 
 describe('TraceUPI API Client', () => {
   const originalFetch = globalThis.fetch
@@ -491,6 +491,139 @@ describe('TraceUPI API Client', () => {
         const apiErr = err as ApiError
         expect(apiErr.status).toBe(422)
         expect(apiErr.isInvalidCounterfactual).toBe(true)
+      }
+    })
+  })
+
+  describe('getMetrics', () => {
+    const mockMetrics: MetricsResponse = {
+      generated_at: '2026-10-17T11:49:01Z',
+      budget_k: 20,
+      evaluation: {
+        evaluated_on: 'held_out_accounts',
+        n_accounts: 144,
+        n_positive_accounts: 26,
+        n_shared_device_accounts: 18,
+      },
+      ml: {
+        threshold: 0.5,
+        precision: 0.963,
+        recall: 1.0,
+        f1: 0.9812,
+        true_positives: 26,
+        false_positives: 1,
+        false_negatives: 0,
+        budget_metrics: {
+          budget_k: 20,
+          k_effective: 20,
+          precision_at_k: 1.0,
+          recall_at_k: 0.7692,
+        },
+        fairness: {
+          fpr_benign_shared_device: 0.0,
+          n_shared_device_evaluated: 18,
+        },
+      },
+      baseline: {
+        precision: 0.2258,
+        recall: 0.2692,
+        f1: 0.2456,
+        true_positives: 7,
+        false_positives: 24,
+        false_negatives: 19,
+        budget_metrics: {
+          budget_k: 20,
+          k_effective: 20,
+          precision_at_k: 0.3,
+          recall_at_k: 0.2308,
+        },
+      },
+      by_scenario: [
+        { scenario: 'mule_ring', n_accounts: 26, ml_flagged: 26, baseline_flagged: 7 },
+        { scenario: 'normal', n_accounts: 100, ml_flagged: 1, baseline_flagged: 24 },
+        { scenario: 'shared_device_family', n_accounts: 18, ml_flagged: 0, baseline_flagged: 0 },
+      ],
+    }
+
+    it('fetches metrics with default budget (no query param)', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockMetrics,
+      })
+
+      const result = await apiClient.getMetrics()
+      expect(result).toEqual(mockMetrics)
+      expect(globalThis.fetch).toHaveBeenCalledWith('/api/metrics', {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      })
+    })
+
+    it('passes budget_k query param for K=10, 20, 50', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockMetrics,
+      })
+
+      await apiClient.getMetrics(10)
+      expect(globalThis.fetch).toHaveBeenCalledWith('/api/metrics?budget_k=10', {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      })
+
+      await apiClient.getMetrics(50)
+      expect(globalThis.fetch).toHaveBeenCalledWith('/api/metrics?budget_k=50', {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      })
+    })
+
+    it('handles 503 analysis_not_run error', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        json: async () => ({ detail: 'analysis_not_run' }),
+      })
+
+      try {
+        await apiClient.getMetrics()
+        expect.unreachable()
+      } catch (err) {
+        expect(err).toBeInstanceOf(ApiError)
+        const apiErr = err as ApiError
+        expect(apiErr.status).toBe(503)
+        expect(apiErr.isAnalysisNotRun).toBe(true)
+      }
+    })
+
+    it('handles 404 metrics_unavailable error', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({ detail: 'metrics_unavailable' }),
+      })
+
+      try {
+        await apiClient.getMetrics()
+        expect.unreachable()
+      } catch (err) {
+        expect(err).toBeInstanceOf(ApiError)
+        const apiErr = err as ApiError
+        expect(apiErr.status).toBe(404)
+        expect(apiErr.detail).toBe('metrics_unavailable')
+      }
+    })
+
+    it('handles network error', async () => {
+      globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network failure'))
+
+      try {
+        await apiClient.getMetrics()
+        expect.unreachable()
+      } catch (err) {
+        expect(err).toBeInstanceOf(ApiError)
+        const apiErr = err as ApiError
+        expect(apiErr.status).toBe(0)
       }
     })
   })

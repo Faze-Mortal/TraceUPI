@@ -9,6 +9,7 @@ import type {
   ReviewUpdateRequest,
   CounterfactualRequest,
   CounterfactualResponse,
+  MetricsResponse,
 } from '../types/api'
 
 export class ApiError extends Error {
@@ -195,5 +196,24 @@ export const apiClient = {
       }
     )
     return handleResponse<CounterfactualResponse>(response)
+  },
+
+  /**
+   * Retrieve evaluation benchmark metrics.
+   * GET /api/metrics?budget_k=K
+   */
+  async getMetrics(budget_k?: BudgetK): Promise<MetricsResponse> {
+    const query = new URLSearchParams()
+    if (budget_k !== undefined) {
+      query.set('budget_k', String(budget_k))
+    }
+    const url = `/api/metrics${query.toString() ? `?${query.toString()}` : ''}`
+    const response = await safeFetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    })
+    return handleResponse<MetricsResponse>(response)
   },
 }

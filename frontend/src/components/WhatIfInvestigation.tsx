@@ -286,7 +286,7 @@ export const WhatIfInvestigation: React.FC<WhatIfInvestigationProps> = ({ alert 
 
       {/* Error Banner */}
       {error && (
-        <div className="what-if-error-banner" role="alert" data-testid="what-if-error-banner">
+        <div className="what-if-error-banner" role="alert" aria-live="assertive" data-testid="what-if-error-banner">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--color-high-risk, #C65B4A)" strokeWidth="2" aria-hidden="true">
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
@@ -295,6 +295,19 @@ export const WhatIfInvestigation: React.FC<WhatIfInvestigationProps> = ({ alert 
           <span>{error}</span>
         </div>
       )}
+
+      {/* Screen Reader Live Region for Counterfactual Simulation */}
+      <div
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-testid="whatif-live-announcement"
+      >
+        {result
+          ? `Hypothetical analysis complete. Original risk score ${result.original_score.toFixed(4)}, hypothetical risk score ${result.counterfactual_score.toFixed(4)}, score delta ${result.score_delta >= 0 ? '+' : ''}${result.score_delta.toFixed(4)}.`
+          : ''}
+      </div>
 
       {/* Results Display */}
       {result && (

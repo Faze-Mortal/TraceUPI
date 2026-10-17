@@ -4,9 +4,73 @@ import type { Alert, AlertSummary, BudgetK, PipelineRunResponse, ReviewStatus } 
 import { InvestigationQueue } from './InvestigationQueue'
 import { AlertDetailInspector } from './AlertDetailInspector'
 import { EvidenceGraphCanvas } from './EvidenceGraphCanvas'
+import { BenchmarkMetricsView } from './BenchmarkMetricsView'
 
 interface DashboardWorkbenchProps {
   onBackToOverview: () => void
+}
+
+export function validateAndFormatUtcCutoff(
+  dateStr: string,
+  timeStr: string
+): { utcIso: string; error: null } | { utcIso: null; error: string } {
+  if (!dateStr || !dateStr.trim()) {
+    return { utcIso: null, error: 'Date is required.' }
+  }
+  if (!timeStr || !timeStr.trim()) {
+    return { utcIso: null, error: 'Time is required.' }
+  }
+
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr.trim())
+  if (!dateMatch) {
+    return { utcIso: null, error: 'Invalid date format. Expected YYYY-MM-DD.' }
+  }
+
+  const year = parseInt(dateMatch[1], 10)
+  const month = parseInt(dateMatch[2], 10)
+  const day = parseInt(dateMatch[3], 10)
+
+  if (year < 1970 || year > 2100) {
+    return { utcIso: null, error: 'Year must be between 1970 and 2100.' }
+  }
+  if (month < 1 || month > 12) {
+    return { utcIso: null, error: 'Month must be between 01 and 12.' }
+  }
+
+  const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
+  const daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+  const maxDays = daysInMonth[month - 1]
+
+  if (day < 1 || day > maxDays) {
+    return {
+      utcIso: null,
+      error: `Invalid calendar date: ${year}-${String(month).padStart(2, '0')} has ${maxDays} days.`,
+    }
+  }
+
+  const timeMatch = /^(\d{2}):(\d{2})$/.exec(timeStr.trim())
+  if (!timeMatch) {
+    return { utcIso: null, error: 'Invalid time format. Expected HH:MM.' }
+  }
+
+  const hours = parseInt(timeMatch[1], 10)
+  const minutes = parseInt(timeMatch[2], 10)
+
+  if (hours < 0 || hours > 23) {
+    return { utcIso: null, error: 'Hours must be between 00 and 23.' }
+  }
+  if (minutes < 0 || minutes > 59) {
+    return { utcIso: null, error: 'Minutes must be between 00 and 59.' }
+  }
+
+  const yStr = String(year).padStart(4, '0')
+  const mStr = String(month).padStart(2, '0')
+  const dStr = String(day).padStart(2, '0')
+  const hStr = String(hours).padStart(2, '0')
+  const minStr = String(minutes).padStart(2, '0')
+
+  const utcIso = `${yStr}-${mStr}-${dStr}T${hStr}:${minStr}:00Z`
+  return { utcIso, error: null }
 }
 
 export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackToOverview }) => {
@@ -28,22 +92,20 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
     return `${h}:${m}`
   })
 
-  // Compute and validate explicit UTC ISO 8601 string from local date and time
+  // Compute and validate explicit UTC ISO 8601 string directly without local timezone conversion
   const computeUtcCutoff = (dateStr: string, timeStr: string) => {
-    try {
-      const localDateTime = new Date(`${dateStr}T${timeStr}:00`)
-      if (isNaN(localDateTime.getTime())) {
-        setCutoffError('Invalid date or time selected.')
-        setAsOfInput('')
-        return
-      }
-      // Explicit UTC ISO format ending in Z without milliseconds: YYYY-MM-DDTHH:MM:SSZ
-      const utcIso = localDateTime.toISOString().replace(/\.\d{3}Z$/, 'Z')
-      setAsOfInput(utcIso)
-      setCutoffError(null)
-    } catch {
-      setCutoffError('Failed to convert selected date/time to UTC.')
+    if (!dateStr) {
       setAsOfInput('')
+      setCutoffError(null)
+      return
+    }
+    const result = validateAndFormatUtcCutoff(dateStr, timeStr)
+    if (result.error !== null) {
+      setCutoffError(result.error)
+      setAsOfInput('')
+    } else {
+      setAsOfInput(result.utcIso)
+      setCutoffError(null)
     }
   }
 
@@ -86,14 +148,17 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
   const [budgetFilter, setBudgetFilter] = useState<BudgetK | 'ALL'>('ALL')
   const [searchQuery, setSearchQuery] = useState<string>('')
 
-  // Active workflow section: 'queue' | 'graph' | 'review'
-  const [activeSection, setActiveSection] = useState<'queue' | 'graph' | 'review'>('queue')
+  // Active workflow section: 'queue' | 'graph' | 'review' | 'metrics'
+  const [activeSection, setActiveSection] = useState<'queue' | 'graph' | 'review' | 'metrics'>('queue')
 
   // Selected alert inspector state
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null)
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null)
   const [isDetailLoading, setIsDetailLoading] = useState<boolean>(false)
   const [detailError, setDetailError] = useState<string | null>(null)
+
+  // Screen reader live announcements for asynchronous actions
+  const [liveAnnouncement, setLiveAnnouncement] = useState<string>('')
 
   // Handle alert selection from queue
   const handleSelectAlert = (alertId: string) => {
@@ -196,12 +261,16 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
       const res = await apiClient.runPipeline(trimmedAsOf ? { as_of: trimmedAsOf } : undefined)
       setPipelineResult(res)
       setIsAnalysisNotRun(false)
+      setLiveAnnouncement(
+        `Fraud-risk analysis completed: ${res.n_transactions} transactions analyzed, ${res.n_alerts} alerts generated.`
+      )
 
       // Refresh alerts queue after analysis
       await fetchAlerts(statusFilter, budgetFilter)
     } catch (err) {
       const msg = err instanceof ApiError ? `${err.detail}` : err instanceof Error ? err.message : 'Pipeline run failed'
       setPipelineError(msg)
+      setLiveAnnouncement(`Fraud-risk analysis failed: ${msg}`)
     } finally {
       setIsPipelineRunning(false)
     }
@@ -210,6 +279,9 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
   // Handle successful human review updates from AlertDetailInspector
   const handleReviewUpdated = (updatedAlert: Alert) => {
     setSelectedAlert(updatedAlert)
+    setLiveAnnouncement(
+      `Review recorded for alert ${updatedAlert.alert_id}: status updated to ${updatedAlert.review.status}.`
+    )
 
     // Update alerts queue item in place to keep queue synchronized immediately
     setAlerts((prevAlerts) =>
@@ -241,6 +313,17 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
 
   return (
     <div className="dashboard-workbench" role="region" aria-label="TraceUPI Investigation Console">
+      {/* Live announcement region for screen readers */}
+      <div
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-testid="workbench-live-announcement"
+      >
+        {liveAnnouncement}
+      </div>
+
       {/* Console Top Header Bar */}
       <header className="console-header">
         <div className="console-title-group">
@@ -283,19 +366,19 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
             </summary>
             <div className="advanced-options-panel">
               <label htmlFor="input-asof-date" className="advanced-options-label">
-                Analyze data up to a time:
+                Analyze data up to a time (UTC):
               </label>
 
               <div className="datetime-picker-row">
                 <div className="picker-field">
                   <label htmlFor="input-asof-date" className="picker-sublabel">
-                    Date:
+                    Date (UTC):
                   </label>
                   <input
                     type="date"
                     id="input-asof-date"
                     data-testid="input-asof-date"
-                    aria-label="Analyze data up to a time"
+                    aria-label="Analyze data up to a time (UTC)"
                     className="input-asof-date font-mono"
                     value={cutoffDate}
                     onChange={(e) => handleCutoffDateChange(e.target.value)}
@@ -304,12 +387,12 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
 
                 <div className="picker-field">
                   <label htmlFor="select-asof-time" className="picker-sublabel">
-                    Time (30m):
+                    Time (UTC, 30m):
                   </label>
                   <select
                     id="select-asof-time"
                     data-testid="select-asof-time"
-                    aria-label="Historical cutoff time"
+                    aria-label="Historical cutoff time (UTC)"
                     className="select-asof-time font-mono"
                     value={cutoffTime}
                     onChange={(e) => handleCutoffTimeChange(e.target.value)}
@@ -335,7 +418,7 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
               </div>
 
               {cutoffError && (
-                <div className="cutoff-error-text" role="alert">
+                <div className="cutoff-error-text" role="alert" data-testid="cutoff-error-text">
                   {cutoffError}
                 </div>
               )}
@@ -344,9 +427,9 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
               {asOfInput && cutoffDate ? (
                 <div className="cutoff-display-card font-mono" data-testid="cutoff-display-active">
                   <div className="cutoff-display-row">
-                    <span className="text-dim">Selected Local:</span>
-                    <span className="text-strong">
-                      {new Date(`${cutoffDate}T${cutoffTime}:00`).toLocaleString()}
+                    <span className="text-dim">Selected Cutoff (UTC):</span>
+                    <span className="text-strong font-mono">
+                      {cutoffDate} {cutoffTime} UTC
                     </span>
                   </div>
                   <div className="cutoff-display-row">
@@ -424,7 +507,7 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
       </header>
 
       {/* Main Console Workspace */}
-      <main className="console-container">
+      <main id="main-content" className="console-container" tabIndex={-1}>
         {/* Pipeline Error Banner */}
         {pipelineError && (
           <div className="alert-banner error" role="alert">
@@ -542,6 +625,21 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
                   {selectedAlert.status}
                 </span>
               )}
+            </button>
+
+            <span className="tab-connector" aria-hidden="true">→</span>
+
+            <button
+              type="button"
+              id="tab-section-metrics"
+              data-testid="tab-section-metrics"
+              className={`workflow-tab ${activeSection === 'metrics' ? 'active' : ''}`}
+              onClick={() => setActiveSection('metrics')}
+              aria-current={activeSection === 'metrics' ? 'page' : undefined}
+            >
+              <span className="tab-number font-mono">4</span>
+              <span className="tab-title">Benchmark Metrics</span>
+              <span className="tab-badge-info font-mono">Evaluation</span>
             </button>
           </div>
         </div>
@@ -811,6 +909,14 @@ export const DashboardWorkbench: React.FC<DashboardWorkbenchProps> = ({ onBackTo
               </div>
             </section>
           </div>
+        )}
+
+        {/* Section D: Benchmark Metrics & Fairness */}
+        {activeSection === 'metrics' && (
+          <BenchmarkMetricsView
+            onRunPipeline={handleRunPipeline}
+            isPipelineRunning={isPipelineRunning}
+          />
         )}
       </main>
     </div>

@@ -22,29 +22,29 @@
   /* Typography Colors */
   --text-primary: #EAE7DF;
   --text-secondary: #A7A89E;
-  --text-muted: #7B7F76;
+  --text-muted: #8A8E84;
   --text-inverse: #121411;
 
   /* Brand Palette (Terracotta - identity, not fraud) */
   --brand-terracotta: #A56F58;
   --brand-hover: #B78066;
   --brand-bg-subtle: rgba(165, 111, 88, 0.15);
-  --color-amber: #A56F58;
-  --color-amber-hover: #B78066;
+  --color-amber: #BA846A;
+  --color-amber-hover: #C59077;
   --color-amber-bg: rgba(165, 111, 88, 0.15);
 
   /* Semantic Palette */
-  --color-high-risk: #C65B4A;
+  --color-high-risk: #DE7260;
   --color-high-risk-bg: #35221F;
-  --color-red: #C65B4A;
+  --color-red: #DE7260;
   --color-red-bg: #35221F;
 
   --color-warning: #D4A15A;
   --color-warning-bg: #352B1E;
 
-  --color-verified: #6E8F72;
+  --color-verified: #7BA07F;
   --color-verified-bg: #222D23;
-  --color-emerald: #6E8F72;
+  --color-emerald: #7BA07F;
   --color-emerald-bg: #222D23;
 
   --color-neutral: #6B6F67;

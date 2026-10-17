@@ -8,13 +8,13 @@ Unified Payments Interface (UPI) has rapidly become the backbone of real-time di
 
 **TraceUPI** is designed as an investigative tool to help analysts detect and understand suspicious transaction clusters, explore multi-hop fraud rings, and inspect explainable risk signals in an interactive visualization interface.
 
-## Planned Technology Stack
+## Technology Stack
 
-- **Architecture:** Monorepo with a single co-located backend and frontend
-- **Frontend:** React + Vite, Graph Visualization (interactive graph canvas)
-- **Backend:** Python FastAPI (REST API routes, validation, orchestration)
-- **Machine Learning & Graph Analysis:** Python ML package (graph feature engineering, ranking models)
-- **Data Persistence:** In-memory / local execution for hackathon MVP (no external database or separate ML microservice required)
+- **Architecture:** Monorepo with co-located backend and frontend
+- **Frontend:** React 19 + TypeScript, Vite, interactive SVG evidence graph canvas
+- **Backend:** Python FastAPI (REST API routes, validation against Contract v1.2, in-memory state orchestration)
+- **Machine Learning & Graph Analysis:** Graph feature engineering (25 features), anomaly ranking model, and rule-based baselines
+- **Data Persistence:** In-memory execution with local datasets and pre-trained model artifact
 
 ## Team Responsibilities
 
@@ -37,5 +37,62 @@ Unified Payments Interface (UPI) has rapidly become the backbone of real-time di
 
 ## Project Status
 
-- **Status:** **Implementation has not started.**
-- The project is currently at the initial repository setup and interface contract alignment stage.
+- **Status:** **Active / Post-Hackathon Refinement.**
+- Implementation aligned with API Contract v1.2 (`contracts/CONTRACT.md`).
+- Placed 5th out of 100 teams at the Code-e-Manipal 2.0 hackathon.
+- Working features: pipeline orchestration, alert queue, explainable evidence graph, counterfactual simulation, review workflow, and historical replay analysis.
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.11+
+- Node.js 18+ and npm
+
+### Backend Setup & Execution
+
+1. Create and activate a Python virtual environment:
+   ```bash
+   python -m venv .venv
+   # Windows:
+   .venv\Scripts\activate
+   # Linux/macOS:
+   source .venv/bin/activate
+   ```
+2. Install runtime dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Start the FastAPI development server:
+   ```bash
+   uvicorn backend.main:app --port 8000
+   ```
+   The backend API will be available at `http://127.0.0.1:8000`.
+
+4. Run backend tests:
+   ```bash
+   pytest -q
+   ```
+
+### Frontend Setup & Execution
+
+1. Install frontend dependencies:
+   ```bash
+   npm --prefix frontend install
+   ```
+2. Start the Vite development server:
+   ```bash
+   npm --prefix frontend run dev
+   ```
+   The UI will be accessible at `http://localhost:5173`. Requests to `/api/*` are proxied to the local backend at `http://127.0.0.1:8000`.
+
+3. Run frontend tests:
+   ```bash
+   npm --prefix frontend test
+   ```
+
+4. Run frontend lint and build:
+   ```bash
+   npm --prefix frontend run lint
+   npm --prefix frontend run build
+   ```

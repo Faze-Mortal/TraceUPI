@@ -246,7 +246,7 @@ export const ReviewWorkflowControls: React.FC<ReviewWorkflowControlsProps> = ({
 
       {/* Error and Success Feedback Banners */}
       {errorBanner && (
-        <div className="review-feedback-banner error-banner" role="alert" data-testid="review-error-banner">
+        <div className="review-feedback-banner error-banner" role="alert" aria-live="assertive" data-testid="review-error-banner">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--color-high-risk, #C65B4A)" strokeWidth="2" aria-hidden="true">
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
@@ -265,7 +265,7 @@ export const ReviewWorkflowControls: React.FC<ReviewWorkflowControlsProps> = ({
       )}
 
       {successBanner && (
-        <div className="review-feedback-banner success-banner" role="status" data-testid="review-success-banner">
+        <div className="review-feedback-banner success-banner" role="status" aria-live="polite" aria-atomic="true" data-testid="review-success-banner">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--color-verified, #6E8F72)" strokeWidth="2.5" aria-hidden="true">
             <polyline points="20 6 9 17 4 12" />
           </svg>
@@ -396,7 +396,7 @@ export const ReviewWorkflowControls: React.FC<ReviewWorkflowControlsProps> = ({
           <div className="actions-header-row">
             <span className="actions-title font-mono">Set Final Review Decision (§9.1):</span>
             {isSubmitting && (
-              <span className="saving-spinner font-mono">
+              <span className="saving-spinner font-mono" role="status" aria-live="polite">
                 <span className="spinner-dots" /> Submitting decision to backend...
               </span>
             )}

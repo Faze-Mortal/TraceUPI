@@ -298,4 +298,40 @@ describe('EvidenceGraphCanvas Component', () => {
     expect(screen.getByRole('region', { name: /Selected Element Details/i })).toBeInTheDocument()
     expect(screen.getByText(/EDGE · TRANSFER/i)).toBeInTheDocument()
   })
+
+  it('renders mobile alternative view discoverability banner with direct action buttons', () => {
+    render(<EvidenceGraphCanvas evidence={mockEvidence} targetAccountId="ACC_0917" />)
+
+    // Discoverability banner exists on canvas view
+    const banner = screen.getByRole('note', { name: /Alternative View Suggestions/i })
+    expect(banner).toBeInTheDocument()
+    expect(screen.getByText(/Graph details may be compact on smaller screens/i)).toBeInTheDocument()
+
+    // 1-tap button to Table View
+    const tableBtn = screen.getByTestId('btn-switch-table-alt')
+    expect(tableBtn).toBeInTheDocument()
+    fireEvent.click(tableBtn)
+
+    // Should switch to table view
+    expect(screen.getByRole('table', { name: /Evidence Graph Nodes Table/i })).toBeInTheDocument()
+
+    // Nodes and edges tables have accessible scroll containers
+    const nodesRegion = screen.getByRole('region', { name: /Participating Entities Table/i })
+    expect(nodesRegion).toBeInTheDocument()
+    expect(nodesRegion).toHaveAttribute('tabIndex', '0')
+
+    const edgesRegion = screen.getByRole('region', { name: /Financial Transfers and Connections Table/i })
+    expect(edgesRegion).toBeInTheDocument()
+    expect(edgesRegion).toHaveAttribute('tabIndex', '0')
+
+    // Switch back to canvas view and test timeline quick-switch button
+    const canvasTab = screen.getByRole('tab', { name: /Interactive Map/i })
+    fireEvent.click(canvasTab)
+
+    const timelineBtn = screen.getByTestId('btn-switch-timeline-alt')
+    expect(timelineBtn).toBeInTheDocument()
+    fireEvent.click(timelineBtn)
+
+    expect(screen.getByText(/Chronological Event Timeline/i)).toBeInTheDocument()
+  })
 })

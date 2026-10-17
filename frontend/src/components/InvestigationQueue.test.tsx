@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { InvestigationQueue } from './InvestigationQueue'
 import type { AlertSummary } from '../types/api'
@@ -171,5 +171,123 @@ describe('InvestigationQueue Component', () => {
 
     // RAPID_PASS_THROUGH is NOT in rules_triggered, so the flag tag Pass-Through should be shown once
     expect(screen.getByText(/^Pass-Through$/i)).toBeInTheDocument()
+  })
+
+  it('implements roving tabindex and aria-selected on listbox option cards', () => {
+    const alerts = [mockAlertHigh, mockAlertMedium, mockAlertLow]
+    const { rerender } = render(
+      <InvestigationQueue
+        alerts={alerts}
+        selectedAlertId={null}
+        onSelectAlert={vi.fn()}
+        statusFilter="ALL"
+        onStatusFilterChange={vi.fn()}
+        budgetFilter="ALL"
+        onBudgetFilterChange={vi.fn()}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        isLoading={false}
+      />
+    )
+
+    const listbox = screen.getByRole('listbox', { name: /Investigation Alerts/i })
+    expect(listbox).toBeInTheDocument()
+
+    const cards = within(listbox).getAllByRole('option')
+    expect(cards).toHaveLength(3)
+
+    // When none is selected, first card has tabIndex 0, others -1
+    expect(cards[0]).toHaveAttribute('tabindex', '0')
+    expect(cards[1]).toHaveAttribute('tabindex', '-1')
+    expect(cards[2]).toHaveAttribute('tabindex', '-1')
+
+    // Rerender with selected alert ALT_0002
+    rerender(
+      <InvestigationQueue
+        alerts={alerts}
+        selectedAlertId="ALT_0002"
+        onSelectAlert={vi.fn()}
+        statusFilter="ALL"
+        onStatusFilterChange={vi.fn()}
+        budgetFilter="ALL"
+        onBudgetFilterChange={vi.fn()}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        isLoading={false}
+      />
+    )
+
+    const updatedCards = within(listbox).getAllByRole('option')
+    expect(updatedCards[0]).toHaveAttribute('tabindex', '-1')
+    expect(updatedCards[0]).toHaveAttribute('aria-selected', 'false')
+    expect(updatedCards[1]).toHaveAttribute('tabindex', '0')
+    expect(updatedCards[1]).toHaveAttribute('aria-selected', 'true')
+    expect(updatedCards[2]).toHaveAttribute('tabindex', '-1')
+    expect(listbox).toHaveAttribute('aria-activedescendant', 'alert-card-ALT_0002')
+  })
+
+  it('navigates through alerts using ArrowDown, ArrowUp, Home, and End keys', () => {
+    const onSelect = vi.fn()
+    const alerts = [mockAlertHigh, mockAlertMedium, mockAlertLow]
+    render(
+      <InvestigationQueue
+        alerts={alerts}
+        selectedAlertId="ALT_0001"
+        onSelectAlert={onSelect}
+        statusFilter="ALL"
+        onStatusFilterChange={vi.fn()}
+        budgetFilter="ALL"
+        onBudgetFilterChange={vi.fn()}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        isLoading={false}
+      />
+    )
+
+    const listbox = screen.getByRole('listbox', { name: /Investigation Alerts/i })
+    const cards = within(listbox).getAllByRole('option')
+
+    // Press ArrowDown from first card
+    fireEvent.keyDown(cards[0], { key: 'ArrowDown' })
+    expect(onSelect).toHaveBeenCalledWith('ALT_0002')
+
+    // Press ArrowUp from second card
+    fireEvent.keyDown(cards[1], { key: 'ArrowUp' })
+    expect(onSelect).toHaveBeenCalledWith('ALT_0001')
+
+    // Press End key from first card to jump to last
+    fireEvent.keyDown(cards[0], { key: 'End' })
+    expect(onSelect).toHaveBeenCalledWith('ALT_0003')
+
+    // Press Home key from last card to jump to first
+    fireEvent.keyDown(cards[2], { key: 'Home' })
+    expect(onSelect).toHaveBeenCalledWith('ALT_0001')
+  })
+
+  it('selects alert on Enter and Space keypress', () => {
+    const onSelect = vi.fn()
+    render(
+      <InvestigationQueue
+        alerts={[mockAlertHigh]}
+        selectedAlertId={null}
+        onSelectAlert={onSelect}
+        statusFilter="ALL"
+        onStatusFilterChange={vi.fn()}
+        budgetFilter="ALL"
+        onBudgetFilterChange={vi.fn()}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        isLoading={false}
+      />
+    )
+
+    const listbox = screen.getByRole('listbox', { name: /Investigation Alerts/i })
+    const card = within(listbox).getByRole('option')
+
+    fireEvent.keyDown(card, { key: 'Enter' })
+    expect(onSelect).toHaveBeenCalledWith('ALT_0001')
+
+    fireEvent.keyDown(card, { key: ' ' })
+    expect(onSelect).toHaveBeenCalledTimes(2)
   })
 })

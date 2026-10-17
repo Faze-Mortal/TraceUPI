@@ -150,3 +150,58 @@ export interface CounterfactualResponse {
   rules_added: string[]
   plausible_benign_alternative: string
 }
+
+export type GroundTruthScenario = 'mule_ring' | 'normal' | 'shared_device_family'
+
+export interface EvaluationInfo {
+  evaluated_on: 'held_out_accounts'
+  n_accounts: number
+  n_positive_accounts: number
+  n_shared_device_accounts: number
+}
+
+export interface BudgetMetrics {
+  budget_k: number
+  k_effective: number
+  precision_at_k: number | null
+  recall_at_k: number | null
+}
+
+export interface FairnessMetrics {
+  fpr_benign_shared_device: number | null
+  n_shared_device_evaluated: number
+}
+
+export interface ClassificationMetrics {
+  precision: number | null
+  recall: number | null
+  f1: number | null
+  true_positives: number
+  false_positives: number
+  false_negatives: number
+  budget_metrics: BudgetMetrics
+}
+
+export interface MLMetrics extends ClassificationMetrics {
+  threshold: number
+  fairness: FairnessMetrics
+}
+
+export type BaselineMetrics = ClassificationMetrics
+
+export interface ScenarioBreakdown {
+  scenario: GroundTruthScenario
+  n_accounts: number
+  ml_flagged: number
+  baseline_flagged: number
+}
+
+export interface MetricsResponse {
+  generated_at: string
+  budget_k: number
+  evaluation: EvaluationInfo
+  ml: MLMetrics
+  baseline: BaselineMetrics
+  by_scenario: ScenarioBreakdown[]
+}
+
